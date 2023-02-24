@@ -18,5 +18,6 @@ for _backend in sys.modules["external"].backend:
         from .gcmc.GCMC import GCMC
         from .lightgcn.LightGCN import LightGCN
         from .egcf.EGCF import EGCF
+        from .roger.RoGER import RoGER
         from .ncf.NCF import NCF
         from .mf.MF import MF

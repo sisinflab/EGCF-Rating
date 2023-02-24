@@ -13,7 +13,6 @@ class LightGCNModel(torch.nn.Module, ABC):
                  num_items,
                  learning_rate,
                  embed_k,
-                 l_w,
                  n_layers,
                  adj,
                  normalize,
@@ -38,7 +37,6 @@ class LightGCNModel(torch.nn.Module, ABC):
         self.num_items = num_items
         self.embed_k = embed_k
         self.learning_rate = learning_rate
-        self.l_w = l_w
         self.n_layers = n_layers
         self.weight_size_list = [self.embed_k] * (self.n_layers + 1)
         self.alpha = torch.tensor([1 / (k + 1) for k in range(len(self.weight_size_list))])

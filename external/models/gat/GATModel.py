@@ -22,7 +22,6 @@ class GATModel(torch.nn.Module, ABC):
                  num_items,
                  learning_rate,
                  embed_k,
-                 l_w,
                  weight_size,
                  n_layers,
                  heads,
@@ -49,7 +48,6 @@ class GATModel(torch.nn.Module, ABC):
         self.num_items = num_items
         self.embed_k = embed_k
         self.learning_rate = learning_rate
-        self.l_w = l_w
         self.weight_size_list = weight_size
         self.n_layers = n_layers
         self.heads = heads

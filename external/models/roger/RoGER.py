@@ -2,58 +2,39 @@ from tqdm import tqdm
 import numpy as np
 import torch
 import random
+import pandas as pd
+from ast import literal_eval as make_tuple
+from torch_geometric.utils import degree
+
 from .pointwise_pos_neg_sampler import Sampler
+
 from elliot.recommender import BaseRecommenderModel
 from elliot.recommender.base_recommender_model import init_charger
 from elliot.recommender.recommender_utils_mixin import RecMixin
-from .LightGCNModel import LightGCNModel
-
-from torch_sparse import SparseTensor
-
-import pandas as pd
+from .RoGERModel import RoGERModel
 
 
-class LightGCN(RecMixin, BaseRecommenderModel):
+class RoGER(RecMixin, BaseRecommenderModel):
     r"""
-    LightGCN: Simplifying and Powering Graph Convolution Network for Recommendation
-
-    For further details, please refer to the `paper <https://dl.acm.org/doi/10.1145/3397271.3401063>`_
-
-    Args:
-        lr: Learning rate
-        epochs: Number of epochs
-        factors: Number of latent factors
-        batch_size: Batch size
-        l_w: Regularization coefficient
-        n_layers: Number of stacked propagation layers
-
-    To include the recommendation model, add it to the config file adopting the following pattern:
-
-    .. code:: yaml
-
-      models:
-        LightGCN:
-          meta:
-            save_recs: True
-          lr: 0.0005
-          epochs: 50
-          batch_size: 512
-          factors: 64
-          batch_size: 256
-          l_w: 0.1
-          n_layers: 2
+    Reviews on Graph Edges for Recommendation
     """
+
     @init_charger
     def __init__(self, data, config, params, *args, **kwargs):
 
         ######################################
-
         self._params_list = [
-            ("_learning_rate", "lr", "lr", 0.0005, float, None),
+            ("_lr", "lr", "lr", 0.0005, float, None),
+            ("_l_ind", "l_ind", "l_ind", 0.0001, float, None),
+            ("_eps", "eps", "eps", 0.01, float, None),
+            ("_emb", "emb", "emb", 64, int, None),
             ("_batch_eval", "batch_eval", "batch_eval", 512, int, None),
-            ("_factors", "factors", "factors", 64, int, None),
-            ("_n_layers", "n_layers", "n_layers", 1, int, None),
-            ("_normalize", "normalize", "normalize", True, bool, None)
+            ("_n_layers", "n_layers", "n_layers", 3, int, None),
+            ("_lambda", "lambda", "lambda", 0.1, float, None),
+            ("_aggr", "aggr", "aggr", 'sim', str, None),
+            ("_dense", "dense", "dense", "(32,16,8)", lambda x: list(make_tuple(x)),
+             lambda x: self._batch_remove(str(x), " []").replace(",", "-")),
+            ("_loader", "loader", "loader", 'InteractionsTextualAttributes', str, None)
         ]
         self.autoset_params()
 
@@ -94,31 +75,44 @@ class LightGCN(RecMixin, BaseRecommenderModel):
         self.df_val_rat = self.df_val_rat[self.df_val_rat['item'] <= self._num_items - 1]
         self.df_test_rat = self.df_test_rat[self.df_test_rat['item'] <= self._num_items - 1]
 
+        self._side_edge_textual = self._data.side_information.InteractionsTextualAttributes
+
         row, col = data.sp_i_train.nonzero()
         col = [c + self._num_users for c in col]
-        edge_index = np.array([row, col])
-        edge_index = torch.tensor(edge_index, dtype=torch.int64)
-        self.adj = SparseTensor(row=torch.cat([edge_index[0], edge_index[1]], dim=0),
-                                col=torch.cat([edge_index[1], edge_index[0]], dim=0),
-                                sparse_sizes=(self._num_users + self._num_items,
-                                              self._num_users + self._num_items))
+        edge_index = torch.tensor(np.array([list(row) + col, col + list(row)]))
+        edge_index = self.norm(edge_index)
 
-        self._model = LightGCNModel(
+        edge_features = self._side_edge_textual.object.get_all_features()
+
+        self._model = RoGERModel(
             num_users=self._num_users,
             num_items=self._num_items,
-            learning_rate=self._learning_rate,
-            embed_k=self._factors,
+            learning_rate=self._lr,
+            l_ind=self._l_ind,
+            embed_k=self._emb,
+            eps=self._eps,
             n_layers=self._n_layers,
-            adj=self.adj,
-            normalize=self._normalize,
+            edge_features=edge_features,
+            edge_index=edge_index,
+            lm=self._lambda,
+            aggr=self._aggr,
+            dense=self._dense,
             random_seed=self._seed
         )
 
     @property
     def name(self):
-        return "LightGCN" \
+        return "RoGER" \
                + f"_{self.get_base_params_shortcut()}" \
                + f"_{self.get_params_shortcut()}"
+
+    def norm(self, edge_index):
+        row, col = edge_index
+        deg = degree(col, self._num_users + self._num_items)
+        deg_inv_sqrt = deg.pow(-0.5)
+        deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+        norm = deg_inv_sqrt[row] * deg_inv_sqrt[col]
+        return torch.stack([row, col, norm], dim=0)
 
     def train(self):
         if self._restore:
