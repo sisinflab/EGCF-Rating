@@ -39,7 +39,6 @@ class LightGCNModel(torch.nn.Module, ABC):
         self.learning_rate = learning_rate
         self.n_layers = n_layers
         self.weight_size_list = [self.embed_k] * (self.n_layers + 1)
-        self.alpha = torch.tensor([1 / (k + 1) for k in range(len(self.weight_size_list))])
         self.adj = adj
         self.normalize = normalize
 
@@ -75,25 +74,23 @@ class LightGCNModel(torch.nn.Module, ABC):
 
     def propagate_embeddings(self, evaluate=False):
         ego_embeddings = torch.cat((self.Gu.to(self.device), self.Gi.to(self.device)), 0)
-        all_embeddings = [ego_embeddings]
 
         for layer in range(0, self.n_layers):
             if evaluate:
                 self.propagation_network.eval()
                 with torch.no_grad():
-                    all_embeddings += [list(
+                    ego_embeddings = list(
                         self.propagation_network.children()
-                    )[layer](all_embeddings[layer].to(self.device), self.adj.to(self.device))]
+                    )[layer](ego_embeddings.to(self.device), self.adj.to(self.device))
             else:
-                all_embeddings += [list(
+                ego_embeddings = list(
                     self.propagation_network.children()
-                )[layer](all_embeddings[layer].to(self.device), self.adj.to(self.device))]
+                )[layer](ego_embeddings.to(self.device), self.adj.to(self.device))
 
         if evaluate:
             self.propagation_network.train()
 
-        all_embeddings = sum([all_embeddings[k] * self.alpha[k] for k in range(len(all_embeddings))])
-        gu, gi = torch.split(all_embeddings, [self.num_users, self.num_items], 0)
+        gu, gi = torch.split(ego_embeddings, [self.num_users, self.num_items], 0)
 
         return gu, gi
 
