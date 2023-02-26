@@ -74,7 +74,7 @@ experiment:
         restore: False
       epochs: 50
       batch_size: 128
-      factors: 16
+      factors: [8, 16, 32]
       lr: [0.0001, 0.0005, 0.001, 0.005, 0.01]
       seed: 123
     external.NCF:
@@ -88,7 +88,7 @@ experiment:
         restore: False
       epochs: 50
       batch_size: 128
-      factors: 16
+      factors: [8, 16, 32]
       lr: [0.0001, 0.0005, 0.001, 0.005, 0.01]
       dropout: 0.1
       dense_size: (32,16,8)
@@ -101,10 +101,8 @@ experiment:
         verbose: True
       epochs: 50
       batch_size: 128
-      factors: 32
+      factors: [8, 16, 32]
       lr: [0.0001, 0.0005, 0.001, 0.005, 0.01]
-      conv_size: 32
-      dense_size: 32
       n_conv: 1
       n_dense: 1
       relations: (1,2,3,4,5)
