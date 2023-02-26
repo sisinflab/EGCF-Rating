@@ -32,7 +32,6 @@ class GCN(RecMixin, BaseRecommenderModel):
             ("_factors", "factors", "factors", 64, int, None),
             ("_n_layers", "n_layers", "n_layers", 3, int, None),
             ("_batch_eval", "batch_eval", "batch_eval", 512, int, None),
-            ("_weight_size", "weight_size", "weight_size", 64, int, None),
         ]
         self.autoset_params()
 
@@ -81,6 +80,8 @@ class GCN(RecMixin, BaseRecommenderModel):
                                 col=torch.cat([edge_index[1], edge_index[0]], dim=0),
                                 sparse_sizes=(self._num_users + self._num_items,
                                               self._num_users + self._num_items))
+
+        self._weight_size = self._factors
 
         self._model = GCNModel(
             num_users=self._num_users,
