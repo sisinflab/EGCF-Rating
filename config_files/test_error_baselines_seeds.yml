@@ -13,21 +13,7 @@ experiment:
   gpu: 1
   external_models_path: ../external/models/__init__.py
   models:
-    external.MF:
-      meta:
-        hyper_opt_alg: grid
-        verbose: True
-        save_weights: False
-        save_recs: False
-        validation_rate: 1
-        validation_metric: MSE
-        restore: False
-      epochs: 50
-      batch_size: 128
-      factors: 8
-      lr: 0.0005
-      seed: 124
-#    external.NCF:
+#    external.MF:
 #      meta:
 #        hyper_opt_alg: grid
 #        verbose: True
@@ -38,11 +24,25 @@ experiment:
 #        restore: False
 #      epochs: 50
 #      batch_size: 128
-#      factors: 16
-#      lr: 0.01
-#      dropout: 0.1
-#      dense_size: (32,16,8)
-#      seed: [456, 789, 101112, 131415]
+#      factors: 8
+#      lr: 0.0005
+#      seed: 124
+    external.NCF:
+      meta:
+        hyper_opt_alg: grid
+        verbose: True
+        save_weights: False
+        save_recs: False
+        validation_rate: 1
+        validation_metric: MSE
+        restore: False
+      epochs: 50
+      batch_size: 128
+      factors: 16
+      lr: 0.01
+      dropout: 0.1
+      dense_size: (32,16,8)
+      seed: 123
 #    external.GCMC:
 #      meta:
 #        save_recs: False
