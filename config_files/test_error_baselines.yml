@@ -4,11 +4,11 @@ experiment:
     strategy: fixed
     train_path: ../data/{0}/Train.tsv
     validation_path: ../data/{0}/Val.tsv
-    test_path: ../data/{0}/Test.tsvside_information:
+    test_path: ../data/{0}/Test.tsv
+#    side_information:
 #      - dataloader: InteractionsTextualAttributes
 #        interactions_features: ../data/{0}/reviews/
-#        intera
-#    ctions: ../data/{0}/interactions.tsv
+#        interactions: ../data/{0}/interactions.tsv
   dataset: Digital_Music
   top_k: 20
   evaluation:
