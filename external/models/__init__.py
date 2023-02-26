@@ -15,8 +15,8 @@ for _backend in sys.modules["external"].backend:
         from .svdpp.SVDpp import SVDpp
     elif _backend == "pytorch":
         from .gat.GAT import GAT
+        from .gcn.GCN import GCN
         from .gcmc.GCMC import GCMC
-        from .lightgcn.LightGCN import LightGCN
         from .egcf.EGCF import EGCF
         from .roger.RoGER import RoGER
         from .ncf.NCF import NCF

@@ -1,59 +1,38 @@
+"""
+Module description:
+
+"""
+
+__version__ = '0.3.0'
+__author__ = 'Vito Walter Anelli, Claudio Pomo, Daniele Malitesta'
+__email__ = 'vitowalter.anelli@poliba.it, claudio.pomo@poliba.it, daniele.malitesta@poliba.it'
+
 from tqdm import tqdm
 import numpy as np
 import torch
+import pandas as pd
 import random
+
 from .pointwise_pos_neg_sampler import Sampler
 from elliot.recommender import BaseRecommenderModel
 from elliot.recommender.base_recommender_model import init_charger
 from elliot.recommender.recommender_utils_mixin import RecMixin
-from .LightGCNModel import LightGCNModel
+from .GCNModel import GCNModel
 
 from torch_sparse import SparseTensor
 
-import pandas as pd
 
-
-class LightGCN(RecMixin, BaseRecommenderModel):
-    r"""
-    LightGCN: Simplifying and Powering Graph Convolution Network for Recommendation
-
-    For further details, please refer to the `paper <https://dl.acm.org/doi/10.1145/3397271.3401063>`_
-
-    Args:
-        lr: Learning rate
-        epochs: Number of epochs
-        factors: Number of latent factors
-        batch_size: Batch size
-        l_w: Regularization coefficient
-        n_layers: Number of stacked propagation layers
-
-    To include the recommendation model, add it to the config file adopting the following pattern:
-
-    .. code:: yaml
-
-      models:
-        LightGCN:
-          meta:
-            save_recs: True
-          lr: 0.0005
-          epochs: 50
-          batch_size: 512
-          factors: 64
-          batch_size: 256
-          l_w: 0.1
-          n_layers: 2
-    """
+class GCN(RecMixin, BaseRecommenderModel):
     @init_charger
     def __init__(self, data, config, params, *args, **kwargs):
-
         ######################################
 
         self._params_list = [
             ("_learning_rate", "lr", "lr", 0.0005, float, None),
-            ("_batch_eval", "batch_eval", "batch_eval", 512, int, None),
             ("_factors", "factors", "factors", 64, int, None),
-            ("_n_layers", "n_layers", "n_layers", 1, int, None),
-            ("_normalize", "normalize", "normalize", True, bool, None)
+            ("_n_layers", "n_layers", "n_layers", 3, int, None),
+            ("_batch_eval", "batch_eval", "batch_eval", 512, int, None),
+            ("_weight_size", "weight_size", "weight_size", 64, int, None),
         ]
         self.autoset_params()
 
@@ -103,20 +82,20 @@ class LightGCN(RecMixin, BaseRecommenderModel):
                                 sparse_sizes=(self._num_users + self._num_items,
                                               self._num_users + self._num_items))
 
-        self._model = LightGCNModel(
+        self._model = GCNModel(
             num_users=self._num_users,
             num_items=self._num_items,
             learning_rate=self._learning_rate,
             embed_k=self._factors,
             n_layers=self._n_layers,
+            weight_size=self._weight_size,
             adj=self.adj,
-            normalize=self._normalize,
             random_seed=self._seed
         )
 
     @property
     def name(self):
-        return "LightGCN" \
+        return "GCN" \
                + f"_{self.get_base_params_shortcut()}" \
                + f"_{self.get_params_shortcut()}"
 

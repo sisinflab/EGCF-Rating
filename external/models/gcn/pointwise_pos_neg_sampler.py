@@ -11,7 +11,7 @@ class Sampler:
             ui = edge_index[idx]
             i = ui[1]
 
-            return ui[0], i, ui[2] - 1.0
+            return ui[0], i, ui[2]
 
         for batch_start in range(0, self.events, self.batch_size):
             user, item, r = map(np.array, zip(*[sample(i) for i in range(batch_start, min(batch_start + self.batch_size,
