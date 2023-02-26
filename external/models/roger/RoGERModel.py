@@ -1,6 +1,6 @@
 from abc import ABC
 
-from torch_geometric.nn import LGConv, GATConv
+from torch_geometric.nn import GCNConv, GATConv
 from collections import OrderedDict
 
 import torch
@@ -81,7 +81,11 @@ class RoGERModel(torch.nn.Module, ABC):
         propagation_node_node_textual_list = []
         for _ in range(self.n_layers):
             propagation_node_node_textual_list.append(
-                (LGConv(normalize=True), 'x, edge_index -> x'))
+                (GCNConv(in_channels=self.embed_k,
+                         out_channels=self.embed_k,
+                         normalize=True,
+                         add_self_loops=False,
+                         bias=False), 'x, edge_index -> x'))
 
         self.node_node_textual_network = torch_geometric.nn.Sequential('x, edge_index',
                                                                        propagation_node_node_textual_list)
@@ -147,19 +151,19 @@ class RoGERModel(torch.nn.Module, ABC):
                     updates = self.update_adjacency(all_embeddings)
                     final_values = self.lm * self.L0.to(self.device) + (1 - self.lm) * updates
                     self.edge_index = torch.stack([self.edge_index[0], self.edge_index[1], final_values], dim=0)
-                    all_embeddings = list(
+                    all_embeddings = torch.relu(list(
                         self.node_node_textual_network.children()
                     )[layer](all_embeddings.to(self.device),
-                             self.edge_index_to_adj(self.edge_index).to(self.device))
+                             self.edge_index_to_adj(self.edge_index).to(self.device)))
             else:
                 with torch.no_grad():
                     updates = self.update_adjacency(all_embeddings)
                     final_values = self.lm * self.L0.to(self.device) + (1 - self.lm) * updates
                     self.edge_index = torch.stack([self.edge_index[0], self.edge_index[1], final_values], dim=0)
-                all_embeddings = list(
+                all_embeddings = torch.relu(list(
                     self.node_node_textual_network.children()
                 )[layer](all_embeddings.to(self.device),
-                         self.edge_index_to_adj(self.edge_index).to(self.device))
+                         self.edge_index_to_adj(self.edge_index).to(self.device)))
 
         gu, gi = torch.split(all_embeddings, [self.num_users, self.num_items], 0)
         return gu, gi
@@ -298,8 +302,9 @@ class RoGERModel(torch.nn.Module, ABC):
                                                       [*self.dense_network_item.parameters()])
 
         else:
-            loss_ind = self.l_ind * self.get_loss_ind([torch.squeeze(w, dim=0) for w in self.attention_user.parameters()],
-                                                      [torch.squeeze(w, dim=0) for w in self.attention_item.parameters()])
+            loss_ind = self.l_ind * self.get_loss_ind(
+                [torch.squeeze(w, dim=0) for w in self.attention_user.parameters()],
+                [torch.squeeze(w, dim=0) for w in self.attention_item.parameters()])
 
         loss += loss_ind
 

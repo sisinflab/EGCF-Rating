@@ -28,119 +28,12 @@ experiment:
         restore: False
       epochs: 50
       batch_size: 128
-      factors: 8
+      factors: 16
       n_layers: 3
-      lr: 0.0005
+      lr: 0.01
       seed: 123
       lambda: 0.3
       eps: 0.01
-      l_ind: 0.01
+      l_ind: 0.0
       dense: (32,16,8)
       aggr: sim
-    external.LightGCN:
-      meta:
-        hyper_opt_alg: grid
-        verbose: True
-        save_weights: False
-        save_recs: False
-        validation_rate: 1
-        validation_metric: MSE
-        restore: False
-      epochs: 50
-      batch_size: 128
-      factors: 16
-      lr: [ 0.0001, 0.0005, 0.001, 0.005, 0.01 ]
-      seed: 123
-    external.GAT:
-      meta:
-        hyper_opt_alg: grid
-        verbose: True
-        save_weights: False
-        save_recs: False
-        validation_rate: 1
-        validation_metric: MSE
-        restore: False
-      epochs: 50
-      batch_size: 128
-      factors: 16
-      lr: [ 0.0001, 0.0005, 0.001, 0.005, 0.01 ]
-      seed: 123
-    external.SVDpp:
-      meta:
-        hyper_opt_alg: grid
-        verbose: True
-        save_weights: False
-        save_recs: False
-        validation_rate: 1
-        validation_metric: MSE
-        restore: False
-      epochs: 50gat
-      batch_size: 128
-      factors: 16
-      lr: [0.0001, 0.0005, 0.001, 0.005, 0.01]
-      seed: 123
-    external.MF:
-      meta:
-        hyper_opt_alg: grid
-        verbose: True
-        save_weights: False
-        save_recs: False
-        validation_rate: 1
-        validation_metric: MSE
-        restore: False
-      epochs: 50
-      batch_size: 128
-      factors: 16
-      lr: [0.0001, 0.0005, 0.001, 0.005, 0.01]
-      seed: 123
-    external.NCF:
-      meta:
-        hyper_opt_alg: grid
-        verbose: True
-        save_weights: False
-        save_recs: False
-        validation_rate: 1
-        validation_metric: MSE
-        restore: False
-      epochs: 50
-      batch_size: 128
-      factors: 16
-      lr: [0.0001, 0.0005, 0.001, 0.005, 0.01]
-      dropout: 0.1
-      dense_size: (32,16,8)
-      seed: 123
-    external.GCMC:
-      meta:
-        save_recs: False
-        validation_metric: MSE
-        validation_rate: 1
-        verbose: True
-      epochs: 50
-      batch_size: 128
-      factors: 32
-      lr: [0.0001, 0.0005, 0.001, 0.005, 0.01]
-      conv_size: 32
-      dense_size: 32
-      n_conv: 1
-      n_dense: 1
-      relations: (1,2,3,4,5)
-      num_basis: 2
-      dropout: 0.1
-      acc: stack
-      seed: 123
-    external.EGCF:
-      meta:
-        hyper_opt_alg: grid
-        verbose: True
-        save_weights: False
-        save_recs: False
-        validation_rate: 1
-        validation_metric: MSE
-        restore: False
-      epochs: 50
-      batch_size: 128
-      lr: [0.0001, 0.0005, 0.001, 0.005, 0.01]
-      n_layers: [1, 2, 3, 4]
-      emb: [8, 16, 32]
-      loader: ('InteractionsTextualAttributes',)
-      seed: 123
