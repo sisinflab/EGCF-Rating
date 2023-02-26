@@ -17,52 +17,52 @@ experiment:
   gpu: 0
   external_models_path: ../external/models/__init__.py
   models:
-    external.SVDpp:
-      meta:
-        hyper_opt_alg: grid
-        verbose: True
-        save_weights: False
-        save_recs: False
-        validation_rate: 1
-        validation_metric: MSE
-        restore: False
-      epochs: 50
-      batch_size: 128
-      factors: [8, 16, 32]
-      lr: [0.0001, 0.0005, 0.001, 0.005, 0.01]
-      seed: 123
-    external.GAT:
-      meta:
-        hyper_opt_alg: grid
-        verbose: True
-        save_weights: False
-        save_recs: False
-        validation_rate: 1
-        validation_metric: MSE
-        restore: False
-      epochs: 50
-      batch_size: 128
-      factors: [8, 16, 32]
-      weight_size: (16,64)
-      message_dropout: 0.2
-      heads: (4,1)
-      lr: [0.0001, 0.0005, 0.001, 0.005, 0.01]
-      seed: 123
-    external.GCN:
-      meta:
-        hyper_opt_alg: grid
-        verbose: True
-        save_weights: False
-        save_recs: False
-        validation_rate: 1
-        validation_metric: MSE
-        restore: False
-      epochs: 50
-      batch_size: 128
-      factors: [8, 16, 32]
-      lr: [0.0001, 0.0005, 0.001, 0.005, 0.01]
-      n_layers: [1, 2, 3, 4]
-      seed: 123
+#    external.SVDpp:
+#      meta:
+#        hyper_opt_alg: grid
+#        verbose: True
+#        save_weights: False
+#        save_recs: False
+#        validation_rate: 1
+#        validation_metric: MSE
+#        restore: False
+#      epochs: 50
+#      batch_size: 128
+#      factors: [8, 16, 32]
+#      lr: [0.0001, 0.0005, 0.001, 0.005, 0.01]
+#      seed: 123
+#    external.GAT:
+#      meta:
+#        hyper_opt_alg: grid
+#        verbose: True
+#        save_weights: False
+#        save_recs: False
+#        validation_rate: 1
+#        validation_metric: MSE
+#        restore: False
+#      epochs: 50
+#      batch_size: 128
+#      factors: [8, 16, 32]
+#      weight_size: (16,64)
+#      message_dropout: 0.2
+#      heads: (4,1)
+#      lr: [0.0001, 0.0005, 0.001, 0.005, 0.01]
+#      seed: 123
+#    external.GCN:
+#      meta:
+#        hyper_opt_alg: grid
+#        verbose: True
+#        save_weights: False
+#        save_recs: False
+#        validation_rate: 1
+#        validation_metric: MSE
+#        restore: False
+#      epochs: 50
+#      batch_size: 128
+#      factors: [8, 16, 32]
+#      lr: [0.0001, 0.0005, 0.001, 0.005, 0.01]
+#      n_layers: [1, 2, 3, 4]
+#      seed: 123
     external.MF:
       meta:
         hyper_opt_alg: grid
@@ -110,19 +110,19 @@ experiment:
       dropout: 0.1
       acc: stack
       seed: 123
-    external.EGCF:
-      meta:
-        hyper_opt_alg: grid
-        verbose: True
-        save_weights: False
-        save_recs: False
-        validation_rate: 1
-        validation_metric: MSE
-        restore: False
-      epochs: 50
-      batch_size: 128
-      lr: [0.0001, 0.0005, 0.001, 0.005, 0.01]
-      n_layers: [1, 2, 3, 4]
-      emb: [8, 16, 32]
-      loader: ('InteractionsTextualAttributes',)
-      seed: 123
+#    external.EGCF:
+#      meta:
+#        hyper_opt_alg: grid
+#        verbose: True
+#        save_weights: False
+#        save_recs: False
+#        validation_rate: 1
+#        validation_metric: MSE
+#        restore: False
+#      epochs: 50
+#      batch_size: 128
+#      lr: [0.0001, 0.0005, 0.001, 0.005, 0.01]
+#      n_layers: [1, 2, 3, 4]
+#      emb: [8, 16, 32]
+#      loader: ('InteractionsTextualAttributes',)
+#      seed: 123
