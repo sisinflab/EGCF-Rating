@@ -63,20 +63,20 @@ experiment:
 #      lr: 0.0005
 #      n_layers: 4
 #      seed: [456, 789, 101112, 131415]
-    external.MF:
-      meta:
-        hyper_opt_alg: grid
-        verbose: True
-        save_weights: False
-        save_recs: False
-        validation_rate: 1
-        validation_metric: MSE
-        restore: False
-      epochs: 50
-      batch_size: 128
-      factors: 8
-      lr: 0.001
-      seed: [124, 125, 126, 127]
+#    external.MF:
+#      meta:
+#        hyper_opt_alg: grid
+#        verbose: True
+#        save_weights: False
+#        save_recs: False
+#        validation_rate: 1
+#        validation_metric: MSE
+#        restore: False
+#      epochs: 50
+#      batch_size: 128
+#      factors: 8
+#      lr: 0.001
+#      seed: [124, 125, 126, 127]
 #    external.NCF:
 #      meta:
 #        hyper_opt_alg: grid
