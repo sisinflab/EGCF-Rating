@@ -17,52 +17,52 @@ experiment:
   gpu: 0
   external_models_path: ../external/models/__init__.py
   models:
-    external.SVDpp:
-      meta:
-        hyper_opt_alg: grid
-        verbose: True
-        save_weights: False
-        save_recs: False
-        validation_rate: 1
-        validation_metric: MSE
-        restore: False
-      epochs: 50
-      batch_size: 128
-      factors: 8
-      lr: 0.0005
-      seed: [456, 789, 101112, 131415]
-    external.GAT:
-      meta:
-        hyper_opt_alg: grid
-        verbose: True
-        save_weights: False
-        save_recs: False
-        validation_rate: 1
-        validation_metric: MSE
-        restore: False
-      epochs: 50
-      batch_size: 128
-      factors: 8
-      weight_size: (16,64)
-      message_dropout: 0.2
-      heads: (4,1)
-      lr: 0.01
-      seed: [456, 789, 101112, 131415]
-    external.GCN:
-      meta:
-        hyper_opt_alg: grid
-        verbose: True
-        save_weights: False
-        save_recs: False
-        validation_rate: 1
-        validation_metric: MSE
-        restore: False
-      epochs: 50
-      batch_size: 128
-      factors: 8
-      lr: 0.0005
-      n_layers: 4
-      seed: [456, 789, 101112, 131415]
+#    external.SVDpp:
+#      meta:
+#        hyper_opt_alg: grid
+#        verbose: True
+#        save_weights: False
+#        save_recs: False
+#        validation_rate: 1
+#        validation_metric: MSE
+#        restore: False
+#      epochs: 50
+#      batch_size: 128
+#      factors: 8
+#      lr: 0.0005
+#      seed: [456, 789, 101112, 131415]
+#    external.GAT:
+#      meta:
+#        hyper_opt_alg: grid
+#        verbose: True
+#        save_weights: False
+#        save_recs: False
+#        validation_rate: 1
+#        validation_metric: MSE
+#        restore: False
+#      epochs: 50
+#      batch_size: 128
+#      factors: 8
+#      weight_size: (16,64)
+#      message_dropout: 0.2
+#      heads: (4,1)
+#      lr: 0.01
+#      seed: [456, 789, 101112, 131415]
+#    external.GCN:
+#      meta:
+#        hyper_opt_alg: grid
+#        verbose: True
+#        save_weights: False
+#        save_recs: False
+#        validation_rate: 1
+#        validation_metric: MSE
+#        restore: False
+#      epochs: 50
+#      batch_size: 128
+#      factors: 8
+#      lr: 0.0005
+#      n_layers: 4
+#      seed: [456, 789, 101112, 131415]
     external.MF:
       meta:
         hyper_opt_alg: grid
@@ -76,23 +76,23 @@ experiment:
       batch_size: 128
       factors: 8
       lr: 0.001
-      seed: [456, 789, 101112, 131415]
-    external.NCF:
-      meta:
-        hyper_opt_alg: grid
-        verbose: True
-        save_weights: False
-        save_recs: False
-        validation_rate: 1
-        validation_metric: MSE
-        restore: False
-      epochs: 50
-      batch_size: 128
-      factors: 32
-      lr: 0.01
-      dropout: 0.1
-      dense_size: (32,16,8)
-      seed: [456, 789, 101112, 131415]
+      seed: [124, 125, 126, 127]
+#    external.NCF:
+#      meta:
+#        hyper_opt_alg: grid
+#        verbose: True
+#        save_weights: False
+#        save_recs: False
+#        validation_rate: 1
+#        validation_metric: MSE
+#        restore: False
+#      epochs: 50
+#      batch_size: 128
+#      factors: 32
+#      lr: 0.01
+#      dropout: 0.1
+#      dense_size: (32,16,8)
+#      seed: [456, 789, 101112, 131415]
     external.GCMC:
       meta:
         save_recs: False
@@ -109,7 +109,7 @@ experiment:
       num_basis: 2
       dropout: 0.1
       acc: stack
-      seed: [456, 789, 101112, 131415]
+      seed: [124, 125, 126, 127]
     external.EGCF:
       meta:
         hyper_opt_alg: grid
@@ -125,4 +125,4 @@ experiment:
       n_layers: 4
       emb: 16
       loader: ('InteractionsTextualAttributes',)
-      seed: [456, 789, 101112, 131415]
+      seed: [124, 125, 126, 127]
