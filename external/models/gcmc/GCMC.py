@@ -75,6 +75,9 @@ class GCMC(RecMixin, BaseRecommenderModel):
         # np.random.seed(self._seed)
         # random.seed(self._seed)
 
+        np.random.seed(123)
+        random.seed(123)
+
         self._sampler = Sampler(self._batch_size, self._data.transactions)
 
         self.df_val_rat = pd.DataFrame(columns=['user', 'item', 'rating'])
