@@ -24,7 +24,7 @@ class MFModel(torch.nn.Module, ABC):
         # torch.cuda.manual_seed(123)
         # torch.cuda.manual_seed_all(123)
         # torch.backends.cudnn.deterministic = True
-        torch.use_deterministic_algorithms(True)
+        # torch.use_deterministic_algorithms(True)
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -58,7 +58,7 @@ class MFModel(torch.nn.Module, ABC):
         torch.cuda.manual_seed(123)
         torch.cuda.manual_seed_all(123)
 
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
+        # self.optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
 
         self.loss = torch.nn.MSELoss()
 
@@ -86,8 +86,10 @@ class MFModel(torch.nn.Module, ABC):
 
         loss = self.loss(torch.squeeze(rui), torch.tensor(r, device=self.device, dtype=torch.float))
 
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+        # self.optimizer.zero_grad()
+        # loss.backward()
+        # self.optimizer.step()
+        #
+        # return loss.detach().cpu().numpy()
 
-        return loss.detach().cpu().numpy()
+        return loss
