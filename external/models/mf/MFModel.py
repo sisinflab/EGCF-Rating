@@ -52,11 +52,11 @@ class MFModel(torch.nn.Module, ABC):
             torch.nn.init.xavier_normal_(torch.empty((1, 1))))
         self.Mu.to(self.device)
 
-        random.seed(123)
-        np.random.seed(123)
-        torch.manual_seed(123)
-        torch.cuda.manual_seed(123)
-        torch.cuda.manual_seed_all(123)
+        # random.seed(123)
+        # np.random.seed(123)
+        # torch.manual_seed(123)
+        # torch.cuda.manual_seed(123)
+        # torch.cuda.manual_seed_all(123)
 
         # self.optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
 
