@@ -36,7 +36,7 @@ class GCMCModel(torch.nn.Module, ABC):
         # torch.cuda.manual_seed(123)
         # torch.cuda.manual_seed_all(123)
         # torch.backends.cudnn.deterministic = True
-        torch.use_deterministic_algorithms(True)
+        # torch.use_deterministic_algorithms(True)
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -103,7 +103,7 @@ class GCMCModel(torch.nn.Module, ABC):
         self.dense_network = torch.nn.Sequential(OrderedDict(dense_network_list))
         self.dense_network.to(self.device)
 
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
+        # self.optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
 
     def propagate_embeddings(self, evaluate, adjacency_matrix):
         current_embeddings = []
@@ -176,8 +176,10 @@ class GCMCModel(torch.nn.Module, ABC):
             torch.tensor(r, device=self.device))
         )
 
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+        # self.optimizer.zero_grad()
+        # loss.backward()
+        # self.optimizer.step()
+        #
+        # return loss.detach().cpu().numpy()
 
-        return loss.detach().cpu().numpy()
+        return loss
