@@ -25,12 +25,6 @@ class MF(RecMixin, BaseRecommenderModel):
         ]
         self.autoset_params()
 
-        np.random.seed(123)
-        random.seed(123)
-        torch.manual_seed(123)
-        torch.cuda.manual_seed(123)
-        torch.cuda.manual_seed_all(123)
-
         self._sampler = Sampler(self._batch_size, self._data.transactions)
 
         self.df_val_rat = pd.DataFrame(columns=['user', 'item', 'rating'])
@@ -72,6 +66,12 @@ class MF(RecMixin, BaseRecommenderModel):
             embed_k=self._factors,
             random_seed=self._seed
         )
+
+        np.random.seed(123)
+        random.seed(123)
+        torch.manual_seed(123)
+        torch.cuda.manual_seed(123)
+        torch.cuda.manual_seed_all(123)
 
         self.optimizer = torch.optim.Adam(self._model.parameters(), lr=self._learning_rate)
 
