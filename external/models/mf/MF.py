@@ -27,6 +27,9 @@ class MF(RecMixin, BaseRecommenderModel):
 
         np.random.seed(123)
         random.seed(123)
+        torch.manual_seed(123)
+        torch.cuda.manual_seed(123)
+        torch.cuda.manual_seed_all(123)
 
         self._sampler = Sampler(self._batch_size, self._data.transactions)
 
