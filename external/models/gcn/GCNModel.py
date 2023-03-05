@@ -26,18 +26,18 @@ class GCNModel(torch.nn.Module, ABC):
                  weight_size,
                  adj,
                  random_seed,
-                 name="GAT",
+                 name="GCN",
                  **kwargs
                  ):
         super().__init__()
 
         # set seed
-        random.seed(123)
-        np.random.seed(123)
-        torch.manual_seed(123)
-        torch.cuda.manual_seed(123)
-        torch.cuda.manual_seed_all(123)
-        torch.backends.cudnn.deterministic = True
+        # random.seed(random_seed)
+        # np.random.seed(random_seed)
+        # torch.manual_seed(random_seed)
+        # torch.cuda.manual_seed(random_seed)
+        # torch.cuda.manual_seed_all(random_seed)
+        # torch.backends.cudnn.deterministic = True
         torch.use_deterministic_algorithms(True)
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

@@ -25,8 +25,8 @@ class MF(RecMixin, BaseRecommenderModel):
         ]
         self.autoset_params()
 
-        np.random.seed(self._seed)
-        random.seed(self._seed)
+        np.random.seed(123)
+        random.seed(123)
 
         self._sampler = Sampler(self._batch_size, self._data.transactions)
 
