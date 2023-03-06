@@ -59,6 +59,12 @@ class MF(RecMixin, BaseRecommenderModel):
         self.df_val_rat = self.df_val_rat[self.df_val_rat['item'] <= self._num_items - 1]
         self.df_test_rat = self.df_test_rat[self.df_test_rat['item'] <= self._num_items - 1]
 
+        np.random.seed(123)
+        random.seed(123)
+        torch.manual_seed(123)
+        torch.cuda.manual_seed(123)
+        torch.cuda.manual_seed_all(123)
+
         self._model = MFModel(
             num_users=self._num_users,
             num_items=self._num_items,
@@ -66,12 +72,6 @@ class MF(RecMixin, BaseRecommenderModel):
             embed_k=self._factors,
             random_seed=self._seed
         )
-
-        np.random.seed(123)
-        random.seed(123)
-        torch.manual_seed(123)
-        torch.cuda.manual_seed(123)
-        torch.cuda.manual_seed_all(123)
 
         self.optimizer = torch.optim.Adam(self._model.parameters(), lr=self._learning_rate)
 
