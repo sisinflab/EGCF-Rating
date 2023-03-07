@@ -9,7 +9,7 @@ experiment:
       - dataloader: InteractionsTextualAttributes
         interactions_features: ../data/{0}/reviews/
         interactions: ../data/{0}/interactions.tsv
-  dataset: Digital_Music
+  dataset: Toys_Games
   top_k: 20
   evaluation:
     cutoffs: [20]
