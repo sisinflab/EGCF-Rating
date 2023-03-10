@@ -102,6 +102,7 @@ class GCMCModel(torch.nn.Module, ABC):
                                                                               bias=False)))
         self.dense_network = torch.nn.Sequential(OrderedDict(dense_network_list))
         self.dense_network.to(self.device)
+        self.loss = torch.nn.CrossEntropyLoss()
 
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
 
@@ -172,9 +173,11 @@ class GCMCModel(torch.nn.Module, ABC):
         user, item, r = batch
         xui, pui = self.forward(inputs=(zu[user], zi[item]))
 
-        loss = - torch.sum(torch.nn.functional.log_softmax(pui, 1) * torch.nn.functional.one_hot(
-            torch.tensor(r, device=self.device))
-        )
+        # loss = - torch.sum(torch.nn.functional.log_softmax(pui, 1) * torch.nn.functional.one_hot(
+        #     torch.tensor(r, device=self.device))
+        # )
+
+        loss = self.loss(input=pui, target=torch.tensor(r, device=self.device))
 
         self.optimizer.zero_grad()
         loss.backward()
