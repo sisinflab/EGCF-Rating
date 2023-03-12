@@ -36,4 +36,4 @@ experiment:
       eps: [0.1, 0.01]
       l_ind: [0.000001, 0.00001, 0.0001]
       dense: (32,16,8)
-      aggr: nn
+      aggr: att
