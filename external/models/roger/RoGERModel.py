@@ -145,7 +145,7 @@ class RoGERModel(torch.nn.Module, ABC):
                 edge_index = torch.stack([self.edge_index[0], self.edge_index[1], final_values], dim=0)
                 all_embeddings = torch.relu(list(
                     self.node_node_textual_network.children()
-                )[layer](all_embeddings.to(self.device),
+                )[layer](torch.dropout(all_embeddings.to(self.device), p=self.drop, train=not evaluate),
                          self.edge_index_to_adj(edge_index).to(self.device)))
 
         if evaluate:
