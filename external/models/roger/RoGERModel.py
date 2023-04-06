@@ -188,7 +188,7 @@ class RoGERModel(torch.nn.Module, ABC):
 
         else:
             edge_index = self.edge_index[:, :self.edge_index.shape[1] // 2].clone()
-            edge_index = torch.concat([edge_index, torch.ones((1, edge_index.shape[1]))])
+            edge_index = torch.concat([edge_index.to(self.device), torch.ones((1, edge_index.shape[1]), device=self.device)])
             _, user_item = self.attention(
                 node_embeddings,
                 self.edge_index_to_adj(edge_index),
