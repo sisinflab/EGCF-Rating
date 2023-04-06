@@ -16,14 +16,13 @@ class RoGERModel(torch.nn.Module, ABC):
                  num_users,
                  num_items,
                  learning_rate,
-                 l_ind,
                  embed_k,
                  n_layers,
                  edge_features,
                  edge_index,
                  lm,
-                 eps,
                  aggr,
+                 drop,
                  dense,
                  random_seed,
                  name="RoGER",
@@ -46,12 +45,10 @@ class RoGERModel(torch.nn.Module, ABC):
         self.num_items = num_items
         self.embed_k = embed_k
         self.learning_rate = learning_rate
-        self.l_ind = l_ind
         self.n_layers = n_layers
 
-        self.L0 = edge_index[2].clone().to(self.device)
+        self.L0 = torch.ones((edge_index.shape[1],), dtype=torch.float32, device=self.device)
         self.edge_index = edge_index.to(self.device)
-        self.eps = eps
 
         self.Gu = torch.nn.Parameter(
             torch.nn.init.xavier_uniform_(torch.empty((self.num_users, self.embed_k))))
@@ -73,6 +70,7 @@ class RoGERModel(torch.nn.Module, ABC):
 
         self.lm = lm
         self.aggr = aggr
+        self.drop = drop
 
         self.edge_embeddings_interactions = torch.tensor(edge_features, dtype=torch.float32, device=self.device)
         self.feature_dim = edge_features.shape[1]
@@ -85,59 +83,43 @@ class RoGERModel(torch.nn.Module, ABC):
                          out_channels=self.embed_k,
                          normalize=True,
                          add_self_loops=False,
-                         bias=False), 'x, edge_index -> x'))
+                         bias=True), 'x, edge_index -> x'))
 
         self.node_node_textual_network = torch_geometric.nn.Sequential('x, edge_index',
                                                                        propagation_node_node_textual_list)
         self.node_node_textual_network.to(self.device)
 
         if self.aggr == 'sim':
-            # projection user
-            self.projection_user = torch.nn.Linear(self.edge_embeddings_interactions.shape[-1], self.embed_k)
-            self.projection_user.to(self.device)
-
-            # projection item
-            self.projection_item = torch.nn.Linear(self.edge_embeddings_interactions.shape[-1], self.embed_k)
-            self.projection_item.to(self.device)
+            # projection
+            self.projection = torch.nn.Linear(self.edge_embeddings_interactions.shape[-1], self.embed_k)
+            self.projection.to(self.device)
 
         elif self.aggr == 'nn':
-            self.dense_layer_size = [self.embed_k * 2 + self.feature_dim] + dense + [1]
+            self.dense_layer_size = [self.embed_k * 2 + self.feature_dim] + dense
             self.num_dense_layers = len(self.dense_layer_size)
-            dense_network_list_user = []
+            dense_network_list = []
             for idx, _ in enumerate(self.dense_layer_size[:-1]):
-                dense_network_list_user.append(
+                dense_network_list.append(
                     ('dense_' + str(idx), torch.nn.Linear(in_features=self.dense_layer_size[idx],
                                                           out_features=self.dense_layer_size[
                                                               idx + 1],
-                                                          bias=False)))
-                dense_network_list_user.append(('relu_' + str(idx), torch.nn.ReLU()))
-            self.dense_network_user = torch.nn.Sequential(OrderedDict(dense_network_list_user))
-            self.dense_network_user.to(self.device)
-            dense_network_list_item = []
-            for idx, _ in enumerate(self.dense_layer_size[:-1]):
-                dense_network_list_item.append(
-                    ('dense_' + str(idx), torch.nn.Linear(in_features=self.dense_layer_size[idx],
-                                                          out_features=self.dense_layer_size[
-                                                              idx + 1],
-                                                          bias=False)))
-                dense_network_list_item.append(('relu_' + str(idx), torch.nn.ReLU()))
-            self.dense_network_item = torch.nn.Sequential(OrderedDict(dense_network_list_item))
-            self.dense_network_item.to(self.device)
+                                                          bias=True)))
+                dense_network_list.append(('drop_' + str(idx), torch.nn.Dropout(p=self.drop)))
+                dense_network_list.append(('relu_' + str(idx), torch.nn.ReLU()))
+            dense_network_list.append(('out', torch.nn.Linear(in_features=self.dense_layer_size[-1],
+                                                              out_features=1,
+                                                              bias=True)))
+            dense_network_list.append(('relu', torch.nn.ReLU()))
+            self.dense_network = torch.nn.Sequential(OrderedDict(dense_network_list))
+            self.dense_network.to(self.device)
         else:
-            self.attention_user = GATConv(in_channels=self.embed_k,
-                                          out_channels=self.embed_k,
-                                          concat=True,
-                                          edge_dim=self.feature_dim,
-                                          add_self_loops=False,
-                                          bias=False)
-            self.attention_user.to(self.device)
-            self.attention_item = GATConv(in_channels=self.embed_k,
-                                          out_channels=self.embed_k,
-                                          concat=True,
-                                          edge_dim=self.feature_dim,
-                                          add_self_loops=False,
-                                          bias=False)
-            self.attention_item.to(self.device)
+            self.attention = GATConv(in_channels=self.embed_k,
+                                     out_channels=self.embed_k,
+                                     concat=True,
+                                     edge_dim=self.feature_dim,
+                                     add_self_loops=False,
+                                     bias=True)
+            self.attention.to(self.device)
 
         self.optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
 
@@ -147,87 +129,73 @@ class RoGERModel(torch.nn.Module, ABC):
         all_embeddings = torch.cat((self.Gu.to(self.device), self.Gi.to(self.device)), 0)
         for layer in range(self.n_layers):
             if evaluate:
+                if self.aggr == 'nn':
+                    self.dense_network.eval()
                 with torch.no_grad():
                     updates = self.update_adjacency(all_embeddings)
                     final_values = self.lm * self.L0.to(self.device) + (1 - self.lm) * updates
-                    self.edge_index = torch.stack([self.edge_index[0], self.edge_index[1], final_values], dim=0)
+                    edge_index = torch.stack([self.edge_index[0], self.edge_index[1], final_values], dim=0)
                     all_embeddings = torch.relu(list(
                         self.node_node_textual_network.children()
                     )[layer](all_embeddings.to(self.device),
-                             self.edge_index_to_adj(self.edge_index).to(self.device)))
+                             self.edge_index_to_adj(edge_index).to(self.device)))
             else:
-                with torch.no_grad():
-                    updates = self.update_adjacency(all_embeddings)
-                    final_values = self.lm * self.L0.to(self.device) + (1 - self.lm) * updates
-                    self.edge_index = torch.stack([self.edge_index[0], self.edge_index[1], final_values], dim=0)
+                updates = self.update_adjacency(all_embeddings)
+                final_values = self.lm * self.L0.to(self.device) + (1 - self.lm) * updates
+                edge_index = torch.stack([self.edge_index[0], self.edge_index[1], final_values], dim=0)
                 all_embeddings = torch.relu(list(
                     self.node_node_textual_network.children()
                 )[layer](all_embeddings.to(self.device),
-                         self.edge_index_to_adj(self.edge_index).to(self.device)))
+                         self.edge_index_to_adj(edge_index).to(self.device)))
+
+        if evaluate:
+            if self.aggr == 'nn':
+                self.dense_network.train()
 
         gu, gi = torch.split(all_embeddings, [self.num_users, self.num_items], 0)
         return gu, gi
 
-    def edge_index_to_adj(self, edge_index, eps=True):
+    def edge_index_to_adj(self, edge_index):
         rows = edge_index[0].long().to(self.device)
         cols = edge_index[1].long().to(self.device)
         values = edge_index[2].float().to(self.device)
 
-        if eps:
-            new_indices = torch.where(values >= self.eps)[0]
-            return SparseTensor(row=rows[new_indices],
-                                col=cols[new_indices],
-                                value=torch.full(size=(new_indices.shape[0],),
-                                                 fill_value=1.0, dtype=torch.float32, device=self.device),
-                                sparse_sizes=(self.num_users + self.num_items,
-                                              self.num_users + self.num_items))
-        else:
-            return SparseTensor(row=rows,
-                                col=cols,
-                                value=values,
-                                sparse_sizes=(self.num_users + self.num_items,
-                                              self.num_users + self.num_items))
+        return SparseTensor(row=rows,
+                            col=cols,
+                            value=values,
+                            sparse_sizes=(self.num_users + self.num_items,
+                                          self.num_users + self.num_items))
 
     def update_adjacency(self, node_embeddings):
-        row, col, _ = self.edge_index
+        row, col = self.edge_index
         row, col = row.long(), col.long()
         row_nodes = node_embeddings[row[:row.shape[0] // 2]]
         col_nodes = node_embeddings[row[:col.shape[0] // 2] - self.num_users]
 
         if self.aggr == 'sim':
             user_item = torch.relu(torch.nn.functional.cosine_similarity(
-                torch.mul(row_nodes, self.projection_user(self.edge_embeddings_interactions)),
-                torch.mul(col_nodes, self.projection_user(self.edge_embeddings_interactions))
+                torch.mul(row_nodes, self.projection(self.edge_embeddings_interactions)),
+                torch.mul(col_nodes, self.projection(self.edge_embeddings_interactions))
             ))
-            item_user = torch.relu(torch.nn.functional.cosine_similarity(
-                torch.mul(col_nodes, self.projection_item(self.edge_embeddings_interactions)),
-                torch.mul(row_nodes, self.projection_item(self.edge_embeddings_interactions))
-            ))
-            updates = torch.concat([user_item, item_user], dim=0)
+            updates = torch.concat([user_item, user_item], dim=0)
             return updates
 
         elif self.aggr == 'nn':
-            user_item = torch.squeeze(self.dense_network_user(torch.concat(
+            user_item = torch.squeeze(self.dense_network(torch.concat(
                 [row_nodes, self.edge_embeddings_interactions, col_nodes], dim=-1)))
-            item_user = torch.squeeze(self.dense_network_item(torch.concat(
-                [col_nodes, self.edge_embeddings_interactions, row_nodes], dim=-1)))
-            updates = torch.concat([user_item, item_user], dim=0)
+            updates = torch.concat([user_item, user_item], dim=0)
             return updates
 
         else:
-            _, user_item = self.attention_user(
+            edge_index = self.edge_index[:, :self.edge_index.shape[1] // 2].clone()
+            edge_index = torch.concat([edge_index, torch.ones((1, edge_index.shape[1]))])
+            _, user_item = self.attention(
                 node_embeddings,
-                self.edge_index_to_adj(self.edge_index[:, :self.edge_index.shape[1] // 2], eps=False),
-                self.edge_embeddings_interactions,
-                return_attention_weights=True)
-            _, item_user = self.attention_item(
-                node_embeddings,
-                self.edge_index_to_adj(self.edge_index[:, self.edge_index.shape[1] // 2:], eps=False),
+                self.edge_index_to_adj(edge_index),
                 self.edge_embeddings_interactions,
                 return_attention_weights=True)
             user_item = torch.squeeze(user_item.coo()[2])
-            item_user = torch.squeeze(item_user.coo()[2])
-            updates = torch.concat([user_item, item_user], dim=0)
+            updates = torch.concat([user_item, user_item], dim=0)
             return updates
 
     def forward(self, inputs, **kwargs):
@@ -250,41 +218,6 @@ class RoGERModel(torch.nn.Module, ABC):
                                    self.Bu.weight[users], self.Bi.weight[items]))
         return rui
 
-    @staticmethod
-    def get_loss_ind(x1, x2):
-        # reference: https://recbole.io/docs/_modules/recbole/model/general_recommender/dgcf.html
-        def _create_centered_distance(x):
-            r = torch.sum(x * x, dim=1, keepdim=True)
-            v = r - 2 * torch.mm(x, x.T + r.T)
-            z_v = torch.zeros_like(v)
-            v = torch.where(v > 0.0, v, z_v)
-            D = torch.sqrt(v + 1e-8)
-            D = D - torch.mean(D, dim=0, keepdim=True) - torch.mean(D, dim=1, keepdim=True) + torch.mean(D)
-            return D
-
-        def _create_distance_covariance(d1, d2):
-            v = torch.sum(d1 * d2) / (d1.shape[0] * d1.shape[0])
-            z_v = torch.zeros_like(v)
-            v = torch.where(v > 0.0, v, z_v)
-            dcov = torch.sqrt(v + 1e-8)
-            return dcov
-
-        loss_ind = 0
-        for xx1, xx2 in zip(x1, x2):
-            D1 = _create_centered_distance(xx1)
-            D2 = _create_centered_distance(xx2)
-
-            dcov_12 = _create_distance_covariance(D1, D2)
-            dcov_11 = _create_distance_covariance(D1, D1)
-            dcov_22 = _create_distance_covariance(D2, D2)
-
-            # calculate the distance correlation
-            value = dcov_11 * dcov_22
-            zero_value = torch.zeros_like(value)
-            value = torch.where(value > 0.0, value, zero_value)
-            loss_ind += dcov_12 / (torch.sqrt(value) + 1e-10)
-        return loss_ind
-
     def train_step(self, batch):
         gu, gi = self.propagate_embeddings()
         user, item, r = batch
@@ -292,21 +225,6 @@ class RoGERModel(torch.nn.Module, ABC):
                                    self.Bu.weight[user], self.Bi.weight[item]))
 
         loss = self.loss(torch.squeeze(rui), torch.tensor(r, device=self.device, dtype=torch.float))
-
-        if self.aggr == 'sim':
-            loss_ind = self.l_ind * self.get_loss_ind([self.projection_user.weight],
-                                                      [self.projection_item.weight])
-
-        elif self.aggr == 'nn':
-            loss_ind = self.l_ind * self.get_loss_ind([*self.dense_network_user.parameters()],
-                                                      [*self.dense_network_item.parameters()])
-
-        else:
-            loss_ind = self.l_ind * self.get_loss_ind(
-                [torch.squeeze(w, dim=0) for w in self.attention_user.parameters()],
-                [torch.squeeze(w, dim=0) for w in self.attention_item.parameters()])
-
-        loss += loss_ind
 
         self.optimizer.zero_grad()
         loss.backward()

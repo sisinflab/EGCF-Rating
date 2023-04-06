@@ -25,12 +25,11 @@ class RoGER(RecMixin, BaseRecommenderModel):
         ######################################
         self._params_list = [
             ("_lr", "lr", "lr", 0.0005, float, None),
-            ("_l_ind", "l_ind", "l_ind", 0.0001, float, None),
-            ("_eps", "eps", "eps", 0.01, float, None),
             ("_emb", "emb", "emb", 64, int, None),
             ("_batch_eval", "batch_eval", "batch_eval", 512, int, None),
             ("_n_layers", "n_layers", "n_layers", 3, int, None),
             ("_lambda", "lambda", "lambda", 0.1, float, None),
+            ("_drop", "drop", "drop", 0.1, float, None),
             ("_aggr", "aggr", "aggr", 'sim', str, None),
             ("_dense", "dense", "dense", "(32,16,8)", lambda x: list(make_tuple(x)),
              lambda x: self._batch_remove(str(x), " []").replace(",", "-")),
@@ -80,7 +79,7 @@ class RoGER(RecMixin, BaseRecommenderModel):
         row, col = data.sp_i_train.nonzero()
         col = [c + self._num_users for c in col]
         edge_index = torch.tensor(np.array([list(row) + col, col + list(row)]))
-        edge_index = self.norm(edge_index)
+        # edge_index = self.norm(edge_index)
 
         edge_features = self._side_edge_textual.object.get_all_features()
 
@@ -88,14 +87,13 @@ class RoGER(RecMixin, BaseRecommenderModel):
             num_users=self._num_users,
             num_items=self._num_items,
             learning_rate=self._lr,
-            l_ind=self._l_ind,
             embed_k=self._emb,
-            eps=self._eps,
             n_layers=self._n_layers,
             edge_features=edge_features,
             edge_index=edge_index,
             lm=self._lambda,
             aggr=self._aggr,
+            drop=self._drop,
             dense=self._dense,
             random_seed=self._seed
         )
