@@ -35,4 +35,4 @@ experiment:
       lambda: [0.0, 0.3, 0.7, 1.0]
       drop: [0.1, 0.3, 0.5]
       dense: (32,16,8)
-      aggr: sim
+      aggr: nn
