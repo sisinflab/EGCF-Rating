@@ -28,7 +28,12 @@ class RoGER(RecMixin, BaseRecommenderModel):
             ("_emb", "emb", "emb", 64, int, None),
             ("_batch_eval", "batch_eval", "batch_eval", 512, int, None),
             ("_n_layers", "n_layers", "n_layers", 3, int, None),
+            ("_iter_GSL" ,"iter_GSL" ,"iter_GSL" ,3, int, None),
             ("_lambda", "lambda", "lambda", 0.1, float, None),
+            ("_alpha", "alpha","alpha",0.1,float, None),
+            ("_beta", "beta", "beta", 0.1, float, None),
+            ("_gamma", "gamma", "gamma", 0.1, float, None),
+            ("_eps_adj", "eps_adj", "eps_adj", 4e-5, float, None),
             ("_drop", "drop", "drop", 0.1, float, None),
             ("_aggr", "aggr", "aggr", 'sim', str, None),
             ("_dense", "dense", "dense", "(32,16,8)", lambda x: list(make_tuple(x)),
@@ -92,6 +97,11 @@ class RoGER(RecMixin, BaseRecommenderModel):
             edge_features=edge_features,
             edge_index=edge_index,
             lm=self._lambda,
+            alpha=self._alpha,
+            beta=self._beta,
+            gamma=self._gamma,
+            iter_GSL=self._iter_GSL,
+            eps_adj=self._eps_adj,
             aggr=self._aggr,
             drop=self._drop,
             dense=self._dense,
@@ -139,7 +149,9 @@ class RoGER(RecMixin, BaseRecommenderModel):
     def get_recommendations(self, k: int = 100):
         predictions_test = []
         predictions_val = []
-        gu, gi = self._model.propagate_embeddings()
+
+        gu, gi, final_values = self._model.propagate_embeddings()
+
         val_len = len(self.df_val_rat)
         with tqdm(total=int(val_len // self._batch_eval), disable=not self._verbose) as t:
             for index, offset in enumerate(range(0, val_len, self._batch_eval)):

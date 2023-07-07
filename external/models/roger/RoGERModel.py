@@ -7,7 +7,6 @@ import torch
 import torch_geometric
 import numpy as np
 import random
-
 from torch_sparse import SparseTensor
 
 
@@ -21,6 +20,11 @@ class RoGERModel(torch.nn.Module, ABC):
                  edge_features,
                  edge_index,
                  lm,
+                 alpha,
+                 beta,
+                 gamma,
+                 iter_GSL,
+                 eps_adj,
                  aggr,
                  drop,
                  dense,
@@ -46,7 +50,6 @@ class RoGERModel(torch.nn.Module, ABC):
         self.embed_k = embed_k
         self.learning_rate = learning_rate
         self.n_layers = n_layers
-
         self.L0 = torch.ones((edge_index.shape[1],), dtype=torch.float32, device=self.device)
         self.edge_index = edge_index.to(self.device)
 
@@ -69,8 +72,13 @@ class RoGERModel(torch.nn.Module, ABC):
         self.Mu.to(self.device)
 
         self.lm = lm
+        self.alpha = alpha
+        self.beta = beta
+        self.gamma = gamma
         self.aggr = aggr
         self.drop = drop
+        self.iter_GSL = iter_GSL
+        self.eps_adj = eps_adj
 
         self.edge_embeddings_interactions = torch.tensor(edge_features, dtype=torch.float32, device=self.device)
         self.feature_dim = edge_features.shape[1]
@@ -133,6 +141,8 @@ class RoGERModel(torch.nn.Module, ABC):
                     self.dense_network.eval()
                 with torch.no_grad():
                     updates = self.update_adjacency(all_embeddings)
+                    curr_raw_adj = self.edge_index_to_adj(
+                        torch.stack([self.edge_index[0], self.edge_index[1], updates], dim=0))
                     final_values = self.lm * self.L0.to(self.device) + (1 - self.lm) * updates
                     edge_index = torch.stack([self.edge_index[0], self.edge_index[1], final_values], dim=0)
                     all_embeddings = torch.relu(list(
@@ -141,6 +151,8 @@ class RoGERModel(torch.nn.Module, ABC):
                              self.edge_index_to_adj(edge_index).to(self.device)))
             else:
                 updates = self.update_adjacency(all_embeddings)
+                curr_raw_adj = self.edge_index_to_adj(
+                    torch.stack([self.edge_index[0], self.edge_index[1], updates], dim=0))
                 final_values = self.lm * self.L0.to(self.device) + (1 - self.lm) * updates
                 edge_index = torch.stack([self.edge_index[0], self.edge_index[1], final_values], dim=0)
                 all_embeddings = torch.relu(list(
@@ -153,7 +165,7 @@ class RoGERModel(torch.nn.Module, ABC):
                 self.dense_network.train()
 
         gu, gi = torch.split(all_embeddings, [self.num_users, self.num_items], 0)
-        return gu, gi
+        return gu, gi, curr_raw_adj
 
     def edge_index_to_adj(self, edge_index):
         rows = edge_index[0].long().to(self.device)
@@ -171,7 +183,6 @@ class RoGERModel(torch.nn.Module, ABC):
         row, col = row.long(), col.long()
         row_nodes = node_embeddings[row[:row.shape[0] // 2]]
         col_nodes = node_embeddings[row[:col.shape[0] // 2] - self.num_users]
-
         if self.aggr == 'sim':
             user_item = torch.relu(torch.nn.functional.cosine_similarity(
                 torch.mul(row_nodes, self.projection(self.edge_embeddings_interactions)),
@@ -188,7 +199,8 @@ class RoGERModel(torch.nn.Module, ABC):
 
         else:
             edge_index = self.edge_index[:, :self.edge_index.shape[1] // 2].clone()
-            edge_index = torch.concat([edge_index.to(self.device), torch.ones((1, edge_index.shape[1]), device=self.device)])
+            edge_index = torch.concat(
+                [edge_index.to(self.device), torch.ones((1, edge_index.shape[1]), device=self.device)])
             _, user_item = self.attention(
                 node_embeddings,
                 self.edge_index_to_adj(edge_index),
@@ -197,6 +209,26 @@ class RoGERModel(torch.nn.Module, ABC):
             user_item = torch.squeeze(user_item.coo()[2])
             updates = torch.concat([user_item, user_item], dim=0)
             return updates
+
+    def add_graph_loss(self, curr_raw_adj, gu, gi):
+        # computes graph loss
+        graph_loss = 0
+        features = torch.cat((gu.to(self.device), gi.to(self.device)), 0)
+        curr_raw_adj = curr_raw_adj.to_dense()
+        L = torch.diagflat(torch.sum(curr_raw_adj, -1)) - curr_raw_adj
+        # SMOOTHNESS LOSS (decreasing alpha, increases smoothness)
+        graph_loss += self.alpha * torch.trace(torch.mm(features.transpose(-1, -2), torch.mm(L, features))) / int(
+            np.prod(curr_raw_adj.shape))
+        ones_vec = torch.ones(curr_raw_adj.size(-1))
+        # DEGREE LOSS (HIGHER BETA GIVES NEGATIVE CONTRIBUTE)
+        graph_loss += -self.beta * torch.mm(ones_vec.unsqueeze(0), torch.log(
+            torch.mm(curr_raw_adj, ones_vec.unsqueeze(-1)) + 1e-12)).squeeze() / curr_raw_adj.shape[-1]
+        # SPARSITY LOSS
+        graph_loss += self.gamma * torch.sum(torch.pow(curr_raw_adj, 2)) / int(np.prod(curr_raw_adj.shape))
+        return graph_loss
+
+    def SquaredFrobeniusNorm(self, X):
+        return torch.sum(torch.pow(X, 2)) / int(np.prod(X.shape))
 
     def forward(self, inputs, **kwargs):
         gu, gi, bu, bi = inputs
@@ -218,16 +250,42 @@ class RoGERModel(torch.nn.Module, ABC):
                                    self.Bu.weight[users], self.Bi.weight[items]))
         return rui
 
+    def diff(self, X, Y, Z):
+        X = X.to_dense()
+        Y = Y.to_dense()
+        Z = Z.to_dense()
+        assert X.shape == Y.shape
+        diff_ = torch.sum(torch.pow(X - Y, 2))
+        norm_ = torch.sum(torch.pow(Z, 2))
+        diff_ = diff_ / torch.clamp(norm_, min=1e-12)
+        return diff_
+
     def train_step(self, batch):
-        gu, gi = self.propagate_embeddings()
+        all_losses = torch.zeros(self.iter_GSL)
+        iter = 0
+        gu, gi, curr_raw_adj = self.propagate_embeddings()
         user, item, r = batch
         rui = self.forward(inputs=(gu[user], gi[item],
                                    self.Bu.weight[user], self.Bi.weight[item]))
-
         loss = self.loss(torch.squeeze(rui), torch.tensor(r, device=self.device, dtype=torch.float))
-
+        graph_loss = self.add_graph_loss(curr_raw_adj, gu, gi)
+        loss += graph_loss
+        all_losses[iter] = loss
+        pre_raw_adj = curr_raw_adj
+        first_raw_adj = curr_raw_adj
+        while (iter == 0 or self.diff(curr_raw_adj, pre_raw_adj, first_raw_adj).item() > self.eps_adj) and iter < self.iter_GSL - 1:
+            iter += 1
+            pre_raw_adj = curr_raw_adj
+            gu, gi, curr_raw_adj = self.propagate_embeddings()
+            user, item, r = batch
+            rui = self.forward(inputs=(gu[user], gi[item],
+                                       self.Bu.weight[user], self.Bi.weight[item]))
+            loss = self.loss(torch.squeeze(rui), torch.tensor(r, device=self.device, dtype=torch.float))
+            graph_loss = self.add_graph_loss(curr_raw_adj, gu, gi)
+            loss += graph_loss
+            all_losses[iter] = loss
+        loss = all_losses[0] + torch.mean(all_losses[1:])
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-
         return loss.detach().cpu().numpy()
