@@ -45,6 +45,8 @@ class RoGER(RecMixin, BaseRecommenderModel):
         np.random.seed(self._seed)
         random.seed(self._seed)
 
+        self._alpha = self._beta = self._gamma = self._lambda
+
         self._sampler = Sampler(self._batch_size, self._data.transactions)
 
         self.df_val_rat = pd.DataFrame(columns=['user', 'item', 'rating'])
