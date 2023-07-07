@@ -222,7 +222,7 @@ class RoGERModel(torch.nn.Module, ABC):
         ones_vec = torch.ones(curr_raw_adj.size(-1))
         # DEGREE LOSS (HIGHER BETA GIVES NEGATIVE CONTRIBUTE)
         graph_loss += -self.beta * torch.mm(ones_vec.unsqueeze(0), torch.log(
-            torch.mm(curr_raw_adj, ones_vec.unsqueeze(-1)) + 1e-12)).squeeze() / curr_raw_adj.shape[-1]
+            torch.mm(curr_raw_adj.to(self.device), ones_vec.unsqueeze(-1).to(self.device) + 1e-12)).squeeze() / curr_raw_adj.shape[-1]
         # SPARSITY LOSS
         graph_loss += self.gamma * torch.sum(torch.pow(curr_raw_adj, 2)) / int(np.prod(curr_raw_adj.shape))
         return graph_loss
