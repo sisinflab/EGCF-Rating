@@ -28,7 +28,7 @@ experiment:
         validation_metric: MSE
         restore: False
       epochs: 50
-      batch_size: 128
+      batch_size: 32
       emb: 16
       n_layers: 3
       iter_GSL: 3
